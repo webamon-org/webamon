@@ -83,8 +83,8 @@ python3 scan.py [-h] (-u URL | -f FILE)
 
 ## Accessing Data
 
-*   **OpenSearch API:** Interact directly with the OpenSearch API (typically exposed on port `9200`).
-*   **OpenSearch Dashboards:** Access the OpenSearch Dashboards interface (typically exposed on port `5601`) to visualize and explore the data. Default credentials might need configuration depending on your `docker-compose.yml` setup.
+*   **OpenSearch Dashboards:** Access the OpenSearch Dashboards interface (http://localhost:5601) [Open Dashboards](http://localhost:5601)
+ to visualize and explore the data. Default credentials admin:admin depending on your `docker-compose.yml` setup.
 
 **Default OpenSearch Indexes:**
 
