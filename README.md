@@ -90,13 +90,21 @@ python3 scan.py [-h] (-u URL | -f FILE)
 
 The stack automatically creates the following OpenSearch indexes with predefined mappings upon initialization:
 
-*   `scans`: Stores the results of individual URL/domain scans.
-*   `servers`: Contains information about the web servers hosting the scanned targets.
+*   `scans`: Stores the results of individual URL/domain scans, including network requests, page details, technologies, etc.
+*   `servers`: Contains information about the web servers hosting the scanned targets (IP, ASN, GeoIP).
 *   `domains`: Holds WHOIS and related domain registration data.
 *   `screenshots`: Stores screenshot data if captured during scans.
 *   `resources`: Contains information about resources loaded by the scanned pages (like JS, CSS, images).
 
 You can query these indexes directly via the API or explore them using OpenSearch Dashboards.
+
+**Example: Exploring Scan Data in OpenSearch Dashboards**
+
+Below is an example of the Discover view in OpenSearch Dashboards, showing data ingested into the `scans` index:
+
+![OpenSearch Dashboards showing scan results](img/opensearch_dashboard_scans_example.png)
+
+This interface allows you to search, filter, and visualize the detailed information collected during each scan.
 
 ## Contributing
 
