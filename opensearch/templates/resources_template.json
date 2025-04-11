@@ -1,0 +1,43 @@
+{
+  "index_patterns": ["resources", "resources-*"],
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": "1",
+        "number_of_replicas": "0"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "report_id": { "type": "keyword" },
+        "resource": { "type": "text", "index": false },
+        "sha256": { "type": "keyword" },
+        "mime_type": { "type": "keyword" },
+        "request_id": { "type": "keyword" },
+        "submission_url": { "type": "keyword" },
+        "resource_url": { "type": "keyword" },
+        "first_seen_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "last_seen_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "tag": { "type": "keyword" },
+        "ip": { "type": "ip" },
+        "asn": {
+          "properties": {
+            "number": { "type": "long" },
+            "name": { "type": "keyword" },
+            "network": { "type": "keyword" }
+          }
+        },
+        "country": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "iso": { "type": "keyword" }
+          }
+        },
+        "domains": { "type": "keyword" },
+        "notes": { "type": "text" },
+        "whitelisted": { "type": "boolean" },
+        "blacklisted": { "type": "boolean" }
+      }
+    }
+  }
+} 

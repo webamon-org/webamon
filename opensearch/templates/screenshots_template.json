@@ -1,0 +1,23 @@
+{
+  "index_patterns": ["screenshots", "screenshots-*"],
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": "1",
+        "number_of_replicas": "0"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "report_id": { "type": "keyword" },
+        "screenshot": { "type": "binary" },
+        "page_title": { "type": "text", "fields": { "keyword": { "type": "keyword", "ignore_above": 256 }}},
+        "domain_name": { "type": "keyword" },
+        "submission_url": { "type": "keyword" },
+        "submission_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "tag": { "type": "keyword" },
+        "date": { "type": "date", "format": "yyyyMMdd||yyyy-MM-dd||strict_date_optional_time" }
+      }
+    }
+  }
+} 

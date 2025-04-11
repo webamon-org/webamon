@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+  # --- Sandbox ---
+  sandbox:
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile
+      args:
+        ELASTIC_BASE: ${ELASTIC_BASE}
+        ELASTIC_USERNAME: ${ELASTIC_USERNAME}
+        ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
+        GEOLITE_LICENSE_KEY: ${GEOLITE_LICENSE_KEY}
+        GEOLITE_ACCOUNT_ID: ${GEOLITE_ACCOUNT_ID}
+
+    container_name: sandbox
+
+    ports:
+      - "5000:5000"
+
+    environment:
+      - ELASTIC_BASE=${ELASTIC_BASE}
+      - ELASTIC_USERNAME=${ELASTIC_USERNAME}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY}
+      - GEOLITE_ACCOUNT_ID=${GEOLITE_ACCOUNT_ID}
+      - OPENSEARCH_PORT=9200
+      - OPENSEARCH_USE_SSL=true
+      - OPENSEARCH_VERIFY_CERTS=false
+      - OPENSEARCH_SSL_SHOW_WARN=false
+
+    networks:
+      - opensearch-net
+
+
+  # --- Certificate Generator Service ---
+  certgen:
+    image: alpine:latest
+    container_name: certgen
+    volumes:
+      - ./opensearch:/opensearch
+      - opensearch-certs:/opensearch/demo-certificates
+    command: >
+      sh -c "
+        apk add --no-cache openssl bash dos2unix &&
+        cd /opensearch &&
+        dos2unix generate-certs.sh &&
+        chmod +x generate-certs.sh &&
+        ./generate-certs.sh &&
+        # Ensure OpenSearch can read the certificate files
+        chmod 644 demo-certificates/node.pem demo-certificates/root-ca.pem &&
+        chmod 600 demo-certificates/node.key demo-certificates/root-ca.key &&
+        # OpenSearch runs as 'opensearch' user, make sure it can read these files
+        chown -R 1000:1000 demo-certificates &&
+        echo '✅ Certificates generated successfully with correct permissions'
+      "
+    restart: "no"
+    healthcheck:
+      test: [ "CMD", "test", "-f", "/opensearch/demo-certificates/node.pem" ]
+      interval: 2s
+      retries: 10
+
+  webamon-node1:
+    image: opensearchproject/opensearch:latest
+    container_name: webamon-node1
+    depends_on:
+      certgen:
+        condition: service_completed_successfully
+    environment:
+      - cluster.name=webamon-cluster
+      - node.name=webamon-node1
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=admin
+      # Enable security and SSL
+      - plugins.security.ssl.transport.pemcert_filepath=/usr/share/opensearch/config/demo-certificates/node.pem
+      - plugins.security.ssl.transport.pemkey_filepath=/usr/share/opensearch/config/demo-certificates/node.key
+      - plugins.security.ssl.transport.pemtrustedcas_filepath=/usr/share/opensearch/config/demo-certificates/root-ca.pem
+      - plugins.security.ssl.transport.enforce_hostname_verification=false
+      - plugins.security.ssl.http.enabled=true
+      - plugins.security.ssl.http.pemcert_filepath=/usr/share/opensearch/config/demo-certificates/node.pem
+      - plugins.security.ssl.http.pemkey_filepath=/usr/share/opensearch/config/demo-certificates/node.key
+      - plugins.security.ssl.http.pemtrustedcas_filepath=/usr/share/opensearch/config/demo-certificates/root-ca.pem
+      - plugins.security.allow_unsafe_democertificates=true
+      - plugins.security.allow_default_init_securityindex=true
+    ulimits:
+      memlock: { soft: -1, hard: -1 }
+      nofile: { soft: 65536, hard: 65536 }
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+      - ./opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
+      - opensearch-certs:/usr/share/opensearch/config/demo-certificates
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    networks:
+      - opensearch-net
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -k --fail -u admin:admin https://localhost:9200/_cluster/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # --- OpenSearch Initialization Service ---
+  opensearch-init:
+    image: alpine:latest
+    container_name: opensearch-init
+    depends_on:
+      webamon-node1:
+        condition: service_healthy
+      webamon-dashboards:
+        condition: service_healthy
+      certgen:
+        condition: service_completed_successfully
+    volumes:
+      - ./opensearch/init-opensearch.sh:/app/init-opensearch.sh
+      - ./opensearch/templates:/app/templates
+      - opensearch-certs:/certs
+    environment:
+      - OPENSEARCH_URL=https://webamon-node1:9200
+      - OPENSEARCH_USERNAME=admin
+      - OPENSEARCH_PASSWORD=admin
+      - CA_CERT_PATH=/certs/demo-certificates/root-ca.pem
+    command: >
+      sh -c "
+        apk add --no-cache curl bash dos2unix jq &&
+        # Copy the script to a temporary location inside the container
+        cp /app/init-opensearch.sh /tmp/init-opensearch.sh &&
+        # Run dos2unix on the temporary copy
+        dos2unix /tmp/init-opensearch.sh &&
+        # Make the temporary copy executable
+        chmod +x /tmp/init-opensearch.sh &&
+        echo 'Waiting a few seconds for OpenSearch to be fully ready after healthcheck...' &&
+        sleep 5 &&
+        echo 'Running initialization script from temporary location...' &&
+        # Execute the temporary copy
+        /tmp/init-opensearch.sh &&
+        echo '✅ Initialization script finished.'
+      "
+    networks:
+      - opensearch-net
+    restart: "no"
+
+  webamon-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    container_name: webamon-dashboards
+    ports:
+      - 5601:5601
+    expose:
+      - '5601'
+    environment:
+      OPENSEARCH_HOSTS: '["https://webamon-node1:9200"]'
+      OPENSEARCH_SSL_VERIFICATIONMODE: 'none'
+      OPENSEARCH_USERNAME: 'admin'
+      OPENSEARCH_PASSWORD: 'admin'
+    networks:
+      - opensearch-net
+    depends_on:
+      webamon-node1:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -u admin:admin --fail http://localhost:5601/api/status || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+
+# --- Volumes ---
+volumes:
+  opensearch-data:
+    driver: local
+  opensearch-certs:
+    driver: local
+
+# --- Networks ---
+networks:
+  opensearch-net: # Network for OpenSearch, Dashboards, and API
+    driver: bridge

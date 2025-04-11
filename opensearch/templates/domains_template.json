@@ -1,0 +1,56 @@
+{
+  "index_patterns": ["domains", "domains-*"],
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": "1",
+        "number_of_replicas": "0"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "name": { "type": "keyword" },
+        "ip": { "type": "ip" },
+        "country": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "iso": { "type": "keyword" }
+          }
+        },
+        "asn": {
+          "properties": {
+            "number": { "type": "long" },
+            "name": { "type": "keyword" },
+            "network": { "type": "keyword" }
+          }
+        },
+        "hosting_scripts": { "type": "boolean" },
+        "resource": {
+          "type": "nested",
+          "properties": {
+            "sha256": { "type": "keyword" },
+            "url": { "type": "keyword" },
+            "mime_type": { "type": "keyword" }
+          }
+        },
+        "server": { "type": "keyword" },
+        "last_seen": { "type": "date", "format": "yyyy-MM-dd||strict_date_optional_time" },
+        "last_seen_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "first_seen_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "sub_domain": { "type": "keyword" },
+        "dns": {
+          "type": "object",
+          "properties": {
+            "A": { "type": "ip" },
+            "AAAA": { "type": "ip" },
+            "CNAME": { "type": "keyword" },
+            "MX": { "type": "keyword" },
+            "NS": { "type": "keyword" },
+            "SOA": { "type": "keyword" },
+            "TXT": { "type": "text", "index": false }
+          }
+        }
+      }
+    }
+  }
+} 

@@ -1,0 +1,245 @@
+{
+  "index_patterns": ["scans", "scans-*"],
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": "1",
+        "number_of_replicas": "0",
+        "mapping.total_fields.limit": 2500
+      }
+    },
+    "mappings": {
+      "properties": {
+        "report_id": { "type": "keyword" },
+        "submission_url": { "type": "keyword" },
+        "submission_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "completion_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "scan_time": { "type": "keyword" },
+        "scan_status": { "type": "keyword" },
+        "tag": { "type": "keyword" },
+        "source": { "type": "keyword" },
+        "date": { "type": "date", "format": "yyyyMMdd||yyyy-MM-dd||strict_date_optional_time" },
+        "engine_id": { "type": "keyword" },
+        "hosting": { "type": "boolean" },
+        "save_resources": { "type": "keyword" },
+
+        "domain_name": { "type": "keyword" },
+        "sub_domain": { "type": "keyword" },
+        "tld": { "type": "keyword" },
+        "resolved_url": { "type": "keyword" },
+        "resolved_domain": { "type": "keyword" },
+        "resolved_sub_domain": { "type": "keyword" },
+        "resolved_tld": { "type": "keyword" },
+
+        "page_title": { "type": "text", "fields": { "keyword": { "type": "keyword", "ignore_above": 256 }}},
+        "dom": { "type": "text", "index": false },
+        "page_links": { "type": "text", "index": false },
+        "page_scripts": { "type": "text", "index": false },
+
+        "errors": {
+          "type": "nested",
+          "properties": {
+            "error": { "type": "text" },
+            "url": { "type": "keyword" }
+          }
+        },
+
+        "cookie": {
+          "type": "nested",
+          "properties": {
+            "name": { "type": "keyword" },
+            "value": { "type": "keyword", "index": false },
+            "domain": { "type": "keyword" },
+            "path": { "type": "keyword" },
+            "expires": { "type": "double" },
+            "size": { "type": "integer" },
+            "http_only": { "type": "boolean" },
+            "secure": { "type": "boolean" },
+            "session": { "type": "boolean" },
+            "same_site": { "type": "keyword" },
+            "priority": { "type": "keyword" },
+            "sourcePort": { "type": "integer" },
+            "sourceScheme": { "type": "keyword" }
+          }
+        },
+
+        "request": {
+          "type": "nested",
+          "properties": {
+            "request": {
+              "properties": {
+                "url": { "type": "keyword" },
+                "method": { "type": "keyword" },
+                "headers": {
+                  "type": "nested",
+                  "properties": {
+                    "name": { "type": "keyword" },
+                    "value": { "type": "keyword", "index": false }
+                  }
+                },
+                "has_post_data": { "type": "boolean" },
+                "post_data": { "type": "text", "index": false },
+                "referrer_policy": { "type": "keyword" }
+              }
+            },
+            "response": {
+              "properties": {
+                "url": { "type": "keyword" },
+                "status": { "type": "integer" },
+                "headers": {
+                  "type": "nested",
+                  "properties": {
+                    "name": { "type": "keyword" },
+                    "value": { "type": "keyword", "index": false }
+                  }
+                },
+                "encoded_data_length": { "type": "long" },
+                "mime_type": { "type": "keyword" },
+                "ip": { "type": "ip" },
+                "port": { "type": "integer" },
+                "response_time": { "type": "float" },
+                "security_state": { "type": "keyword" },
+                "status_text": { "type": "keyword" },
+                "security_details": {
+                   "type": "nested",
+                   "properties": {
+                      "name": { "type": "keyword" },
+                      "value": { "type": "text", "index": false }
+                   }
+                }
+              }
+            }
+          }
+        },
+
+        "resource": {
+          "type": "nested",
+          "properties": {
+            "sha256": { "type": "keyword" },
+            "url": { "type": "keyword" },
+            "mime_type": { "type": "keyword" }
+          }
+        },
+
+        "technology": {
+          "type": "nested",
+          "properties": {
+            "name": { "type": "keyword" },
+            "version": { "type": "keyword" },
+            "categories": { "type": "keyword" }
+          }
+        },
+
+        "certificate": {
+          "type": "nested",
+          "properties": {
+            "protocol": { "type": "keyword" },
+            "key_exchange": { "type": "keyword" },
+            "key_exchange_group": { "type": "keyword" },
+            "cipher": { "type": "keyword" },
+            "mac": { "type": "keyword" },
+            "subject_name": { "type": "keyword" },
+            "issuer": { "type": "keyword" },
+            "valid_from": { "type": "long" },
+            "valid_to": { "type": "long" },
+            "valid_from_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+            "valid_to_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+            "signature_algorithm": { "type": "keyword" },
+            "san_list": { "type": "keyword" },
+            "domain_name": { "type": "keyword" },
+            "sub_domain": { "type": "keyword" },
+            "tld": { "type": "keyword" }
+          }
+        },
+
+        "domain": {
+          "type": "nested",
+          "properties": {
+            "name": { "type": "keyword" },
+            "ip": { "type": "ip" },
+            "country": {
+              "properties": {
+                "name": { "type": "keyword" },
+                "iso": { "type": "keyword" }
+              }
+            },
+            "asn": {
+              "properties": {
+                "number": { "type": "long" },
+                "name": { "type": "keyword" },
+                "network": { "type": "keyword" }
+              }
+            },
+            "hosting_scripts": { "type": "boolean" },
+            "response_code": { "type": "integer" },
+            "mime_type": { "type": "keyword" },
+            "resource": {
+              "type": "nested",
+              "properties": {
+                "sha256": { "type": "keyword" },
+                "url": { "type": "keyword" },
+                "mime_type": { "type": "keyword" }
+              }
+            },
+            "server": { "type": "keyword" },
+            "total_response_size": { "type": "double" },
+            "root": { "type": "boolean" }
+          }
+        },
+
+        "server": {
+          "type": "nested",
+          "properties": {
+            "ip": { "type": "ip" },
+            "hosting_scripts": { "type": "boolean" },
+            "mime_type": { "type": "keyword" },
+            "country": {
+              "properties": {
+                "name": { "type": "keyword" },
+                "iso": { "type": "keyword" }
+              }
+            },
+            "asn": {
+              "properties": {
+                "number": { "type": "long" },
+                "name": { "type": "keyword" },
+                "network": { "type": "keyword" }
+              }
+            },
+            "resource": {
+              "type": "nested",
+              "properties": {
+                "sha256": { "type": "keyword" },
+                "url": { "type": "keyword" },
+                "mime_type": { "type": "keyword" }
+              }
+            },
+            "response_code": { "type": "integer" },
+            "domain": { "type": "keyword" },
+            "total_response_size": { "type": "double" },
+            "server": { "type": "keyword" }
+          }
+        },
+
+        "meta": {
+          "properties": {
+            "request_count": { "type": "integer" },
+            "script_count": { "type": "integer" },
+            "domain_count": { "type": "integer" },
+            "submission_url": { "type": "keyword" },
+            "submission_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+            "risk_score": { "type": "keyword" },
+            "submission": { "type": "keyword" },
+            "report_id": { "type": "keyword" }
+          }
+        },
+
+        "threat_ai": {
+           "type": "object",
+           "enabled": false
+        },
+        "ingestion_timestamp": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" }
+      }
+    }
+  }
+} 

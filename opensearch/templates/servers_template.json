@@ -1,0 +1,43 @@
+{
+  "index_patterns": ["servers", "servers-*"],
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": "1",
+        "number_of_replicas": "0"
+      }
+    },
+    "mappings": {
+      "properties": {
+        "ip": { "type": "ip" },
+        "hosting_scripts": { "type": "boolean" },
+        "country": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "iso": { "type": "keyword" }
+          }
+        },
+        "asn": {
+          "properties": {
+            "number": { "type": "long" },
+            "name": { "type": "keyword" },
+            "network": { "type": "keyword" }
+          }
+        },
+        "resource": {
+          "type": "nested",
+          "properties": {
+            "sha256": { "type": "keyword" },
+            "url": { "type": "keyword" },
+            "mime_type": { "type": "keyword" }
+          }
+        },
+        "domain": { "type": "keyword" },
+        "server": { "type": "keyword" },
+        "last_seen": { "type": "date", "format": "yyyy-MM-dd||strict_date_optional_time" },
+        "last_seen_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" },
+        "first_seen_utc": { "type": "date", "format": "strict_date_optional_time||yyyy-MM-dd'T'HH:mm:ss'Z'" }
+      }
+    }
+  }
+} 
