@@ -102,7 +102,7 @@ You can query these indexes directly via the API or explore them using OpenSearc
 
 Below is an example of the Discover view in OpenSearch Dashboards, showing data ingested into the `scans` index:
 
-![OpenSearch Dashboards showing scan results](img/opensearch_dashboard_scans_example.png)
+![OpenSearch Dashboards showing scan results](img/opensearch_dashboard_scans_example.PNG)
 
 This interface allows you to search, filter, and visualize the detailed information collected during each scan.
 
