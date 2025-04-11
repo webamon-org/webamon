@@ -2,17 +2,27 @@
 
 ## Overview
 
-Webamon provides a simple, self-hosted stack for mass scanning URLs and domains. It ingests scan results, along with associated WHOIS and DNS data, into OpenSearch, enabling easy hunting, analysis, and visualization across large datasets.
+Webamon provides a simple, self-hosted stack for performing **comprehensive web scans** on URLs and domains. It acts as a private sandbox to analyze web pages, collecting detailed information including:
+
+*   **Page Content:** DOM structure, rendered text, links, scripts.
+*   **Network Activity:** Full request/response details (headers, status codes, timings, IPs), cookies, security details (certificates).
+*   **Technology Detection:** Identifies underlying web technologies.
+*   **Resource Analysis:** Captures details about loaded resources (JS, CSS, images).
+*   **Screenshots:** (Optional) Captures visual representation of the page.
+
+This rich scan data is then **enriched** with associated WHOIS and DNS information for the target domain and related IPs. All collected data is ingested into OpenSearch, enabling powerful searching, analysis, and visualization across large datasets for threat hunting, web reconnaissance, or technical analysis.
 
 This sandbox environment allows for private and controlled scanning activities.
 
 ## Features
 
-*   **Mass URL/Domain Scanning:** Scan single targets or lists of targets from a file.
-*   **Data Enrichment:** Gathers WHOIS and DNS information for scanned targets.
-*   **OpenSearch Integration:** Stores and indexes all collected data in OpenSearch for powerful searching and analysis.
-*   **OpenSearch Dashboards:** Visualize scan results and trends (requires dashboard setup).
+*   **In-depth Web Scanning:** Captures detailed page information (DOM, links, scripts), network requests/responses, cookies, certificates, and detected technologies.
+*   **Mass URL/Domain Scanning:** Scan single targets or lists of targets from a file via a simple script.
+*   **Data Enrichment:** Augments scan results with WHOIS (domain registration) and DNS data, including IP geolocation and ASN information.
+*   **OpenSearch Integration:** Stores and indexes all collected data (web scan details, WHOIS, DNS) in OpenSearch for powerful searching and analysis.
+*   **OpenSearch Dashboards:** Visualize scan results, network activity, technology usage, and other trends (requires dashboard setup).
 *   **Dockerized Deployment:** Easy setup and deployment using Docker Compose.
+*   **Configurable:** Control aspects like resource saving and potentially screenshot capture.
 
 ## Prerequisites
 
