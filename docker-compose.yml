@@ -18,6 +18,10 @@ services:
     ports:
       - "5000:5000"
 
+    depends_on:
+      opensearch-init:
+        condition: service_completed_successfully
+
     environment:
       - ELASTIC_BASE=${ELASTIC_BASE}
       - ELASTIC_USERNAME=${ELASTIC_USERNAME}
@@ -66,6 +70,7 @@ services:
     depends_on:
       certgen:
         condition: service_completed_successfully
+
     environment:
       - cluster.name=webamon-cluster
       - node.name=webamon-node1
