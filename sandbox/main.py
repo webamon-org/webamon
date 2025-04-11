@@ -130,6 +130,7 @@ def get_config():
 def format_utc_datetime(dt):
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
+
 config = get_config()
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.basicConfig(level=eval(f'logging.{config["log_level"].upper()}'))
@@ -152,11 +153,6 @@ failed = 0
 skipped = 0
 
 
-
-
-
-
-
 def get_openPhish():
     response = requests.get("https://www.openphish.com/feed.txt")
     if response.status_code == 200:
@@ -170,20 +166,31 @@ def get_openPhish():
 @app.route('/scan', methods=['POST'])
 def enqueue():
     data = request.json
-    report_id = ''
-    if 'report_id' in data:
-        report_id = data['report_id']
-    report = phuck(data['submission_url'], report_id)
-    if config['save_elastic']:
-        OpenSearch.save_report(Formatting.clean_data(report))
-        if 'domain' in report:
-            for domain in report['domain']:
-                domains.update(domain)
+    report_id = data.get('report_id', str(uuid.uuid4()))  # generate one if not provided
+    submission_url = data.get('submission_url')
 
-        if 'server' in report:
-            for server in report['server']:
-                servers.update(server)
-    return jsonify({"scan_status": report['scan_status'], "data": {"submission_url": data['submission_url'], 'report_id': report['report_id']}}), 200
+    def run_scan():
+        report = phuck(submission_url, report_id)
+        if config['save_elastic']:
+            OpenSearch.save_report(Formatting.clean_data(report))
+            if 'domain' in report:
+                for domain in report['domain']:
+                    domains.update(domain)
+            if 'server' in report:
+                for server in report['server']:
+                    servers.update(server)
+
+    # Launch scan in background thread
+    threading.Thread(target=run_scan, daemon=True).start()
+
+    # Return immediately
+    return jsonify({
+        "scan_status": "queued",
+        "data": {
+            "submission_url": submission_url,
+            "report_id": report_id
+        }
+    }), 202
 
 
 def set_cookies(driver, domain):
@@ -484,7 +491,7 @@ def main():
             if config['source'] == 'mass_scan':
                 logger.info('Mass scan mode — reading URLs from /app/data/all_domains.txt and queuing...')
                 try:
-                    with open('/app/data/all_domains.txt', 'r') as f:
+                    with open('/app/data/mass_scan.txt', 'r') as f:
                         file_line_count = 0
                         for line in f:
                             url = line.strip()
@@ -495,7 +502,7 @@ def main():
                                      logger.info(f"Queued {file_line_count} URLs... (Queue size: {q.qsize()})")
                         logger.info(f"Finished reading {file_line_count} URLs from file.")
                 except FileNotFoundError:
-                    logger.error("Error: /app/data/all_domains.txt not found.")
+                    logger.error("Error: /app/data/mass_scan.txt not found.")
                     # Signal workers to exit early
                     for _ in range(num_threads):
                         q.put(None)
@@ -598,17 +605,12 @@ def main():
         print("-------------------------")
 
     else: # queue_worker is True (Flask mode)
-        # In Flask mode, the enqueue function adds to the queue,
-        # and worker threads should be started persistently.
         logger.info("Starting in Queue Worker mode (Flask API)...")
 
         # Start persistent worker threads
         num_flask_workers = int(config['threads']) # Use configured threads for Flask workers too
         flask_threads = []
         for i in range(num_flask_workers):
-            # Non-daemon threads might be better here if you want them to finish
-            # processing queue items even if the main Flask thread is asked to shut down gracefully.
-            # However, daemon=True is simpler for forceful stops.
             thread = threading.Thread(target=url_worker, args=(q, f"FlaskWorker-{i+1}"), daemon=True)
             thread.start()
             flask_threads.append(thread)
@@ -623,9 +625,6 @@ def main():
         for _ in range(num_flask_workers):
             q.put(None) # Add sentinels
 
-        # Optional: Wait for worker threads to finish cleanly
-        # for t in flask_threads:
-        #     t.join(timeout=5) # Wait max 5 seconds per thread
 
         logger.info("Queue worker mode finished.")
 
