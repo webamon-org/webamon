@@ -110,6 +110,4 @@ This interface allows you to search, filter, and visualize the detailed informat
 
 Contributions are welcome! Please feel free to submit pull requests or open issues.
 
-## License
 
-(Specify your project's license here, e.g., MIT, Apache 2.0)
