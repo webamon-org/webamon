@@ -29,6 +29,10 @@ _SCANS_TEMPLATE = {
             "refresh_interval": "30s",
             "codec": "best_compression",
             "mapping": {"total_fields": {"limit": 2000}},
+            # Domain/TLD keywords are lower-cased and ASCII-folded, so
+            # "Example.COM" and "example.com" match the same term query.
+            "analysis": {"normalizer": {"lowercase_normalizer": {
+                "type": "custom", "filter": ["lowercase", "asciifolding"]}}},
         },
         "mappings": _SCANS_MAPPING,
     },
@@ -121,10 +125,16 @@ async def ensure_templates(os_client) -> None:
     client = os_client.client
     settings = os_client.settings
     entities = (settings.domains_index, settings.servers_index)
-    try:
-        await _put_if_not_outranked(client, "webamon-scans", _SCANS_TEMPLATE)
-        await _put_if_not_outranked(client, "webamon-resources", _RESOURCES_TEMPLATE)
+    # Each step is independent: one rejected template must not leave the
+    # others uninstalled (the indices would then be dynamic-mapped on first
+    # write, and stay that way).
+    for name, body in (("webamon-scans", _SCANS_TEMPLATE), ("webamon-resources", _RESOURCES_TEMPLATE)):
+        try:
+            await _put_if_not_outranked(client, name, body)
+        except Exception as e:
+            logger.error("failed to install index template %s - documents may be rejected: %s", name, e)
 
+    try:
         # Covers the dated write targets. Without this they are dynamic-mapped
         # on first write and `name`/`ip` land as text+keyword multifields
         # rather than plain keywords.
@@ -157,4 +167,4 @@ async def ensure_templates(os_client) -> None:
                 await client.indices.create(index=entity, body=_ENTITY_MAPPING)
         logger.info("index templates + entity indices ensured")
     except Exception as e:
-        logger.error("failed to ensure templates: %s", e)
+        logger.error("failed to ensure entity template/indices: %s", e)
