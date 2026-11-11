@@ -54,6 +54,9 @@ The scanner has been rebuilt on **Playwright** with an async engine. Compared wi
     upper and lower case letters, a digit and a special character. Add `MAXMIND_ACCOUNT_ID` and
     `MAXMIND_LICENSE_KEY` if you have them.
 
+    The password is applied when OpenSearch first starts and is then kept in its data volume. To change it later,
+    run `docker compose down -v` (this also deletes stored scans) and start again.
+
 3.  **Build and start the stack:**
     ```bash
     docker compose up --build -d

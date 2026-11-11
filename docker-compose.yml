@@ -70,34 +70,15 @@ services:
       - geoip:/usr/share/GeoIP
     restart: "no"
 
-  # --- Certificate generator (self-signed demo certificates) ---
-  certgen:
-    image: alpine:3.20
-    container_name: certgen
-    volumes:
-      - ./opensearch:/opensearch
-      - opensearch-certs:/opensearch/demo-certificates
-    command: >
-      sh -c "
-        apk add --no-cache openssl bash dos2unix &&
-        cd /opensearch &&
-        dos2unix generate-certs.sh &&
-        chmod +x generate-certs.sh &&
-        ./generate-certs.sh &&
-        chmod 644 demo-certificates/node.pem demo-certificates/root-ca.pem &&
-        chmod 600 demo-certificates/node.key demo-certificates/root-ca.key &&
-        chown -R 1000:1000 demo-certificates &&
-        echo 'Certificates generated'
-      "
-    restart: "no"
-
   # --- OpenSearch ---
+  # Security uses OpenSearch's built-in demo setup: on first start it generates
+  # self-signed TLS certificates and sets the admin password from
+  # OPENSEARCH_INITIAL_ADMIN_PASSWORD. The password is stored in the data
+  # volume, so changing it in .env later needs `docker compose down -v` first
+  # (which also deletes the scan data).
   webamon-node1:
     image: opensearchproject/opensearch:2.19.1
     container_name: webamon-node1
-    depends_on:
-      certgen:
-        condition: service_completed_successfully
     environment:
       - cluster.name=webamon-cluster
       - node.name=webamon-node1
@@ -111,8 +92,6 @@ services:
       nofile: { soft: 65536, hard: 65536 }
     volumes:
       - opensearch-data:/usr/share/opensearch/data
-      - ./opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
-      - opensearch-certs:/usr/share/opensearch/config/demo-certificates
     ports:
       - "127.0.0.1:${OPENSEARCH_PORT:-9200}:9200"
     networks:
@@ -178,7 +157,6 @@ services:
 
 volumes:
   opensearch-data:
-  opensearch-certs:
   geoip:
 
 networks:
