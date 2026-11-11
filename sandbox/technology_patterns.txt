@@ -265,7 +265,9 @@ back4app,Back4App
 platform\.sh,Platform.sh
 
 # Miscellaneous
-favicon.ico,Website Favicon
+favicon\.ico,Website Favicon ICO
+favicon\.png,Website Favicon PNG
+favicon\.svg,Website Favicon SVG
 apollo,Apollo
 next\.js,Next.js
 nuxt\.js,Nuxt.js
