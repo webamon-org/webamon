@@ -1,19 +1,21 @@
 """Explicit index templates + entity index setup.
 
-v2 shipped no mappings, so OpenSearch dynamic-mapped everything — the cause of
-the ``domain[]`` flat-object cross-matching pitfall in the current scans-*
-indices. v3 ships templates and can map ``domain``/``request``/``certificate``
-as ``nested`` (set ``NESTED_DOMAINS = True``) so per-domain queries stop
-cross-matching host<->resource. Left False by default to preserve exact query
-compatibility with existing dashboards; flip on a new index generation.
+The scans mapping (``scans_mapping.json``) is complete and ``dynamic: strict``:
+every field the scanner writes is declared with its type. Leaving scans to
+dynamic mapping is not safe: some fields hold different types in different
+reports (``request.response.security_details.value`` is a date for one
+certificate field and text for the next), so whichever report arrives first
+fixes the type and later reports are rejected.
 """
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-NESTED_DOMAINS = False
+_SCANS_MAPPING = json.loads((Path(__file__).with_name("scans_mapping.json")).read_text(encoding="utf-8"))
 
 _SCANS_TEMPLATE = {
     "index_patterns": ["scans-*"],
@@ -21,36 +23,14 @@ _SCANS_TEMPLATE = {
         # A short refresh interval on a busy scans index creates a large segment
         # merge backlog. Reading one report back is a realtime GET by _id, which
         # bypasses refresh entirely, so 30s costs nothing on the submit->read path.
-        "settings": {"number_of_shards": 1, "number_of_replicas": 0, "refresh_interval": "30s"},
-        "mappings": {
-            "dynamic": True,
-            "properties": {
-                "report_id": {"type": "keyword"},
-                "submission_url": {"type": "keyword"},
-                "resolved_url": {"type": "keyword"},
-                "domain_name": {"type": "keyword"},
-                "resolved_domain": {"type": "keyword"},
-                "tld": {"type": "keyword"},
-                "scan_status": {"type": "keyword"},
-                "submission_utc": {"type": "date"},
-                "completion_utc": {"type": "date"},
-                "date": {"type": "date", "format": "yyyy-MM-dd"},
-                "tag": {"type": "keyword"},
-                "feed": {"type": "keyword"},
-                "source": {"type": "keyword"},
-                "page_title": {"type": "text"},
-                "meta": {
-                    "properties": {
-                        "risk_score": {"type": "integer"},
-                        "request_count": {"type": "integer"},
-                        "script_count": {"type": "integer"},
-                        "domain_count": {"type": "integer"},
-                    }
-                },
-                "domain": {"type": "nested" if NESTED_DOMAINS else "object"},
-                "certificate": {"type": "nested" if NESTED_DOMAINS else "object"},
-            },
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 0,
+            "refresh_interval": "30s",
+            "codec": "best_compression",
+            "mapping": {"total_fields": {"limit": 2000}},
         },
+        "mappings": _SCANS_MAPPING,
     },
 }
 

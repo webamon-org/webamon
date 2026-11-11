@@ -1,0 +1,850 @@
+{
+ "dynamic": "strict",
+ "properties": {
+  "certificate": {
+   "dynamic": "false",
+   "properties": {
+    "cipher": {
+     "type": "keyword"
+    },
+    "domain_name": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "issuer": {
+     "type": "keyword"
+    },
+    "key_exchange": {
+     "type": "keyword"
+    },
+    "key_exchange_group": {
+     "type": "keyword"
+    },
+    "protocol": {
+     "type": "keyword"
+    },
+    "san_list": {
+     "type": "keyword"
+    },
+    "signature_algorithm": {
+     "type": "keyword"
+    },
+    "sub_domain": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "subject_name": {
+     "type": "keyword"
+    },
+    "tld": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "valid_from": {
+     "type": "long"
+    },
+    "valid_from_utc": {
+     "format": "strict_date_time||yyyy-MM-dd'T'HH:mm:ss'Z'",
+     "type": "date"
+    },
+    "valid_to": {
+     "type": "long"
+    },
+    "valid_to_utc": {
+     "format": "strict_date_time||yyyy-MM-dd'T'HH:mm:ss'Z'",
+     "type": "date"
+    }
+   },
+   "type": "object"
+  },
+  "changed": {
+   "type": "boolean"
+  },
+  "changes": {
+   "type": "keyword"
+  },
+  "completion_utc": {
+   "format": "strict_date_time||yyyy-MM-dd'T'HH:mm:ss'Z'",
+   "type": "date"
+  },
+  "cookie": {
+   "dynamic": "false",
+   "properties": {
+    "domain": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "expiry": {
+     "type": "long"
+    },
+    "http_only": {
+     "type": "boolean"
+    },
+    "name": {
+     "type": "keyword"
+    },
+    "path": {
+     "type": "keyword"
+    },
+    "same_site": {
+     "type": "keyword"
+    },
+    "secure": {
+     "type": "boolean"
+    },
+    "value": {
+     "ignore_above": 2048,
+     "type": "keyword"
+    }
+   },
+   "type": "object"
+  },
+  "date": {
+   "format": "strict_date||yyyy-MM-dd",
+   "type": "date"
+  },
+  "dom": {
+   "type": "text"
+  },
+  "domain": {
+   "dynamic": "false",
+   "properties": {
+    "asn": {
+     "dynamic": "false",
+     "properties": {
+      "name": {
+       "type": "keyword"
+      },
+      "network": {
+       "type": "keyword"
+      },
+      "number": {
+       "type": "long"
+      }
+     },
+     "type": "object"
+    },
+    "certificate": {
+     "enabled": false,
+     "type": "object"
+    },
+    "country": {
+     "dynamic": "false",
+     "properties": {
+      "iso": {
+       "type": "keyword"
+      },
+      "name": {
+       "type": "keyword"
+      }
+     },
+     "type": "object"
+    },
+    "dns": {
+     "dynamic": "strict",
+     "properties": {
+      "a": {
+       "type": "ip"
+      },
+      "aaaa": {
+       "type": "ip"
+      },
+      "cname": {
+       "type": "keyword"
+      },
+      "error": {
+       "type": "keyword"
+      },
+      "mx": {
+       "type": "keyword"
+      },
+      "ns": {
+       "type": "keyword"
+      },
+      "ptr": {
+       "type": "keyword"
+      },
+      "soa": {
+       "type": "keyword"
+      },
+      "txt": {
+       "type": "keyword"
+      }
+     },
+     "type": "object"
+    },
+    "hosting_scripts": {
+     "type": "boolean"
+    },
+    "hostname": {
+     "type": "keyword"
+    },
+    "ip": {
+     "type": "ip"
+    },
+    "ips": {
+     "type": "ip"
+    },
+    "mime_type": {
+     "type": "keyword"
+    },
+    "name": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "request": {
+     "dynamic": "false",
+     "properties": {
+      "encoded_data_length": {
+       "type": "long"
+      },
+      "ip": {
+       "type": "ip"
+      },
+      "mime_type": {
+       "type": "keyword"
+      },
+      "response_code": {
+       "type": "integer"
+      },
+      "url": {
+       "fields": {
+        "keyword": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "text"
+      }
+     },
+     "type": "object"
+    },
+    "request_count": {
+     "type": "integer"
+    },
+    "resource": {
+     "properties": {
+      "mime_type": {
+       "type": "keyword"
+      },
+      "sha256": {
+       "type": "keyword"
+      },
+      "ssdeep": {
+       "dynamic": "strict",
+       "properties": {
+        "chunk": {
+         "type": "keyword"
+        },
+        "chunksize": {
+         "type": "integer"
+        },
+        "double_chunk": {
+         "type": "keyword"
+        },
+        "sha256": {
+         "type": "keyword"
+        },
+        "ssdeep": {
+         "type": "keyword"
+        }
+       },
+       "type": "object"
+      },
+      "url": {
+       "fields": {
+        "keyword": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "text"
+      }
+     },
+     "type": "object"
+    },
+    "response_code": {
+     "type": "integer"
+    },
+    "root": {
+     "type": "boolean"
+    },
+    "server": {
+     "type": "keyword"
+    },
+    "sub_domain": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "tld": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "total_response_size": {
+     "type": "double"
+    },
+    "whois": {
+     "enabled": false,
+     "type": "object"
+    }
+   },
+   "type": "object"
+  },
+  "domain_name": {
+   "normalizer": "lowercase_normalizer",
+   "type": "keyword"
+  },
+  "engine_id": {
+   "type": "keyword"
+  },
+  "errors": {
+   "properties": {
+    "error": {
+     "type": "keyword"
+    },
+    "url": {
+     "fields": {
+      "keyword": {
+       "ignore_above": 2048,
+       "type": "keyword"
+      }
+     },
+     "type": "text"
+    }
+   },
+   "type": "object"
+  },
+  "favicons": {
+   "dynamic": "strict",
+   "properties": {
+    "content_length": {
+     "type": "long"
+    },
+    "content_type": {
+     "type": "keyword"
+    },
+    "dhash": {
+     "type": "keyword"
+    },
+    "md5": {
+     "type": "keyword"
+    },
+    "mmh3": {
+     "type": "integer"
+    },
+    "sha256": {
+     "type": "keyword"
+    },
+    "url": {
+     "ignore_above": 2048,
+     "type": "keyword"
+    }
+   },
+   "type": "object"
+  },
+  "feed": {
+   "type": "keyword"
+  },
+  "fingerprint": {
+   "dynamic": "strict",
+   "properties": {
+    "asn": {
+     "type": "keyword"
+    },
+    "cert_config": {
+     "type": "keyword"
+    },
+    "cert_issuer": {
+     "type": "keyword"
+    },
+    "cert_san": {
+     "type": "keyword"
+    },
+    "cookie_names": {
+     "type": "keyword"
+    },
+    "cookies": {
+     "type": "keyword"
+    },
+    "dom": {
+     "type": "keyword"
+    },
+    "dom_band": {
+     "type": "keyword"
+    },
+    "dom_structure": {
+     "type": "keyword"
+    },
+    "domains": {
+     "type": "keyword"
+    },
+    "header_order": {
+     "type": "keyword"
+    },
+    "links": {
+     "type": "keyword"
+    },
+    "mx_set": {
+     "type": "keyword"
+    },
+    "ns_set": {
+     "type": "keyword"
+    },
+    "scan_fingerprint": {
+     "type": "keyword"
+    },
+    "scripts": {
+     "type": "keyword"
+    },
+    "ssl": {
+     "type": "keyword"
+    },
+    "tech": {
+     "type": "keyword"
+    }
+   },
+   "type": "object"
+  },
+  "lexical": {
+   "properties": {
+    "brand_distance": {
+     "type": "integer"
+    },
+    "brand_match": {
+     "type": "keyword"
+    },
+    "digit_ratio": {
+     "type": "float"
+    },
+    "entropy": {
+     "type": "float"
+    },
+    "has_punycode": {
+     "type": "boolean"
+    },
+    "hyphen_count": {
+     "type": "integer"
+    },
+    "is_idn": {
+     "type": "boolean"
+    },
+    "label_count": {
+     "type": "integer"
+    },
+    "length": {
+     "type": "integer"
+    },
+    "max_label_length": {
+     "type": "integer"
+    },
+    "token_count": {
+     "type": "integer"
+    }
+   }
+  },
+  "meta": {
+   "dynamic": "false",
+   "properties": {
+    "domain_count": {
+     "type": "integer"
+    },
+    "report_id": {
+     "type": "keyword"
+    },
+    "request_count": {
+     "type": "integer"
+    },
+    "risk_score": {
+     "type": "integer"
+    },
+    "risk_score_version": {
+     "type": "integer"
+    },
+    "script_count": {
+     "type": "integer"
+    },
+    "submission_url": {
+     "fields": {
+      "keyword": {
+       "ignore_above": 2048,
+       "type": "keyword"
+      }
+     },
+     "type": "text"
+    },
+    "submission_utc": {
+     "format": "strict_date_time||yyyy-MM-dd'T'HH:mm:ss'Z'",
+     "type": "date"
+    }
+   },
+   "type": "object"
+  },
+  "monitor": {
+   "type": "boolean"
+  },
+  "page_links": {
+   "type": "text"
+  },
+  "page_scripts": {
+   "type": "text"
+  },
+  "page_title": {
+   "fields": {
+    "keyword": {
+     "ignore_above": 512,
+     "type": "keyword"
+    }
+   },
+   "type": "text"
+  },
+  "private": {
+   "type": "boolean"
+  },
+  "redirect_chain": {
+   "properties": {
+    "ip": {
+     "type": "keyword"
+    },
+    "location": {
+     "type": "keyword"
+    },
+    "status": {
+     "type": "integer"
+    },
+    "url": {
+     "type": "keyword"
+    }
+   }
+  },
+  "report_id": {
+   "type": "keyword"
+  },
+  "request": {
+   "properties": {
+    "request": {
+     "dynamic": "false",
+     "properties": {
+      "has_post_data": {
+       "type": "boolean"
+      },
+      "headers": {
+       "properties": {
+        "name": {
+         "type": "keyword"
+        },
+        "value": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "object"
+      },
+      "method": {
+       "type": "keyword"
+      },
+      "post_data": {
+       "index": false,
+       "type": "text"
+      },
+      "post_data_entry": {
+       "enabled": false,
+       "type": "object"
+      },
+      "referrer_policy": {
+       "type": "keyword"
+      },
+      "url": {
+       "fields": {
+        "keyword": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "text"
+      }
+     },
+     "type": "object"
+    },
+    "response": {
+     "dynamic": "false",
+     "properties": {
+      "encoded_data_length": {
+       "type": "long"
+      },
+      "headers": {
+       "properties": {
+        "name": {
+         "type": "keyword"
+        },
+        "value": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "object"
+      },
+      "ip": {
+       "type": "ip"
+      },
+      "mime_type": {
+       "type": "keyword"
+      },
+      "port": {
+       "type": "integer"
+      },
+      "response_time": {
+       "type": "double"
+      },
+      "security_details": {
+       "dynamic": "false",
+       "properties": {
+        "name": {
+         "type": "keyword"
+        },
+        "value": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "object"
+      },
+      "security_state": {
+       "type": "keyword"
+      },
+      "status": {
+       "type": "integer"
+      },
+      "status_text": {
+       "type": "keyword"
+      },
+      "url": {
+       "fields": {
+        "keyword": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "text"
+      }
+     },
+     "type": "object"
+    }
+   },
+   "type": "object"
+  },
+  "resolved_domain": {
+   "normalizer": "lowercase_normalizer",
+   "type": "keyword"
+  },
+  "resolved_sub_domain": {
+   "normalizer": "lowercase_normalizer",
+   "type": "keyword"
+  },
+  "resolved_tld": {
+   "normalizer": "lowercase_normalizer",
+   "type": "keyword"
+  },
+  "resolved_url": {
+   "fields": {
+    "keyword": {
+     "ignore_above": 2048,
+     "type": "keyword"
+    }
+   },
+   "type": "text"
+  },
+  "resource": {
+   "properties": {
+    "mime_type": {
+     "type": "keyword"
+    },
+    "sha256": {
+     "type": "keyword"
+    },
+    "ssdeep": {
+     "dynamic": "false",
+     "properties": {
+      "chunk": {
+       "type": "keyword"
+      },
+      "chunksize": {
+       "type": "integer"
+      },
+      "double_chunk": {
+       "type": "keyword"
+      },
+      "sha256": {
+       "type": "keyword"
+      },
+      "ssdeep": {
+       "type": "keyword"
+      }
+     },
+     "type": "object"
+    },
+    "url": {
+     "fields": {
+      "keyword": {
+       "ignore_above": 2048,
+       "type": "keyword"
+      }
+     },
+     "type": "text"
+    }
+   },
+   "type": "object"
+  },
+  "save_resources": {
+   "type": "keyword"
+  },
+  "scan_status": {
+   "type": "keyword"
+  },
+  "scan_time": {
+   "type": "keyword"
+  },
+  "server": {
+   "dynamic": "false",
+   "properties": {
+    "asn": {
+     "dynamic": "strict",
+     "properties": {
+      "name": {
+       "type": "keyword"
+      },
+      "network": {
+       "type": "keyword"
+      },
+      "number": {
+       "type": "long"
+      }
+     },
+     "type": "object"
+    },
+    "country": {
+     "dynamic": "strict",
+     "properties": {
+      "iso": {
+       "type": "keyword"
+      },
+      "name": {
+       "type": "keyword"
+      }
+     },
+     "type": "object"
+    },
+    "domain": {
+     "normalizer": "lowercase_normalizer",
+     "type": "keyword"
+    },
+    "hosting_scripts": {
+     "type": "boolean"
+    },
+    "ip": {
+     "type": "ip"
+    },
+    "mime_type": {
+     "type": "keyword"
+    },
+    "resource": {
+     "properties": {
+      "mime_type": {
+       "type": "keyword"
+      },
+      "sha256": {
+       "type": "keyword"
+      },
+      "ssdeep": {
+       "dynamic": "strict",
+       "properties": {
+        "chunk": {
+         "type": "keyword"
+        },
+        "chunksize": {
+         "type": "integer"
+        },
+        "double_chunk": {
+         "type": "keyword"
+        },
+        "sha256": {
+         "type": "keyword"
+        },
+        "ssdeep": {
+         "type": "keyword"
+        }
+       },
+       "type": "object"
+      },
+      "url": {
+       "fields": {
+        "keyword": {
+         "ignore_above": 2048,
+         "type": "keyword"
+        }
+       },
+       "type": "text"
+      }
+     },
+     "type": "object"
+    },
+    "response_code": {
+     "type": "integer"
+    },
+    "server": {
+     "type": "keyword"
+    },
+    "total_response_size": {
+     "type": "double"
+    }
+   },
+   "type": "object"
+  },
+  "source": {
+   "type": "keyword"
+  },
+  "sub_domain": {
+   "normalizer": "lowercase_normalizer",
+   "type": "keyword"
+  },
+  "submission_url": {
+   "fields": {
+    "keyword": {
+     "ignore_above": 2048,
+     "type": "keyword"
+    }
+   },
+   "type": "text"
+  },
+  "submission_utc": {
+   "format": "strict_date_time||yyyy-MM-dd'T'HH:mm:ss'Z'",
+   "type": "date"
+  },
+  "tag": {
+   "type": "keyword"
+  },
+  "technology": {
+   "properties": {
+    "name": {
+     "type": "keyword"
+    },
+    "url": {
+     "fields": {
+      "keyword": {
+       "ignore_above": 2048,
+       "type": "keyword"
+      }
+     },
+     "type": "text"
+    }
+   },
+   "type": "object"
+  },
+  "tenant": {
+   "type": "keyword"
+  },
+  "tld": {
+   "normalizer": "lowercase_normalizer",
+   "type": "keyword"
+  }
+ }
+}
