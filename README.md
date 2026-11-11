@@ -1,113 +1,132 @@
-# Webamon Sandbox Stack - Opensource Private URL & Domain Scanner
+# Webamon Sandbox Stack - Open-source Private URL & Domain Scanner
 
 ## Overview
 
-Webamon provides a simple, self-hosted stack for performing **comprehensive web scans** on URLs and domains. It acts as a private sandbox to analyze web pages, collecting detailed information including:
+Webamon provides a self-hosted stack for **comprehensive web scans** of URLs and domains. It is a private sandbox that
+renders each page in a real browser and records what it does:
 
-*   **Page Content:** DOM structure, rendered text, links, scripts.
-*   **Network Activity:** Full request/response details (headers, status codes, timings, IPs), cookies, security details (certificates).
-*   **Technology Detection:** Identifies underlying web technologies.
-*   **Resource Analysis:** Captures details about loaded resources (JS, CSS, images).
-*   **Screenshots:** (Optional) Captures visual representation of the page.
+*   **Page content:** the rendered DOM, page title, links and scripts.
+*   **Network activity:** every request and response (headers, status, timings, IPs), cookies and TLS certificates.
+*   **Technology detection:** the frameworks, servers and services a page uses.
+*   **Resources:** each loaded JS, CSS or other file, deduplicated by SHA-256.
+*   **Fingerprints:** content hashes that cluster pages built from the same kit, even across unrelated domains.
+*   **Screenshots:** optional.
 
-This rich scan data is then **enriched** with associated WHOIS and DNS information for the target domain and related IPs. All collected data is ingested into OpenSearch, enabling powerful searching, analysis, and visualization across large datasets for threat hunting, web reconnaissance, or technical analysis.
+Scans are enriched with DNS records, IP geolocation and ASN data, then stored in OpenSearch for searching, pivoting
+and visualisation in OpenSearch Dashboards.
 
-This sandbox environment allows for private and controlled scanning activities.
+## What's new in this version
 
-## Features
+The scanner has been rebuilt on **Playwright** with an async engine. Compared with the previous Selenium version:
 
-*   **In-depth Web Scanning:** Captures detailed page information (DOM, links, scripts), network requests/responses, cookies, certificates, and detected technologies.
-*   **Mass URL/Domain Scanning:** Scan single targets or lists of targets from a file via a simple script.
-*   **Data Enrichment:** Augments scan results with WHOIS (domain registration) and DNS data, including IP geolocation and ASN information.
-*   **OpenSearch Integration:** Stores and indexes all collected data (web scan details, WHOIS, DNS) in OpenSearch for powerful searching and analysis.
-*   **OpenSearch Dashboards:** Visualize scan results, network activity, technology usage, and other trends (requires dashboard setup).
-*   **Dockerized Deployment:** Easy setup and deployment using Docker Compose.
-*   **Configurable:** Control aspects like resource saving and potentially screenshot capture.
+*   **Faster and lighter:** a pool of long-lived browser processes, each scan in a fresh isolated browser context, and
+    batched writes to OpenSearch instead of hundreds of single requests per scan.
+*   **Page fingerprints:** `fingerprint.dom`, `dom_structure`, `dom_band` (fuzzy, survives small edits), `links`,
+    `scripts`, `ssl`, `cookies` and more, plus favicon hashes (`favicons.mmh3`). Search one hash to find every page
+    built from the same kit.
+*   **Safer to run:** private and internal network targets are blocked (SSRF guard), and every scan has a deadline and
+    memory limits so a hostile page cannot hang or exhaust a worker.
+*   **Correct entity history:** `domains` and `servers` are single indices where first-seen and last-seen accumulate.
+*   **Simpler setup:** GeoIP databases download at run time with MaxMind's own updater, and nothing secret is baked
+    into the image.
+*   **FastAPI endpoint:** same `POST /scan` contract as before, with optional API-key auth and a `/healthz` status.
 
 ## Prerequisites
 
-*   **Docker & Docker Compose:** Must be installed on your system.
-*   **Git:** Required for cloning the repository.
-*   **MaxMind GeoLite2 Account:** This stack utilizes GeoLite2 databases for IP geolocation. You need a free MaxMind account to obtain the necessary credentials.
-    *   Sign up here: [https://www.maxmind.com/en/geolite2/signup](https://www.maxmind.com/en/geolite2/signup)
-    *   You will need your **Account ID** and a **License Key**.
+*   **Docker and Docker Compose.**
+*   **About 6 GB of free memory** (OpenSearch takes 2 GB, the scanner up to 3 GB by default).
+*   **A MaxMind GeoLite2 account (optional)** for country and ASN enrichment. Sign up free at
+    [maxmind.com](https://www.maxmind.com/en/geolite2/signup) for an **Account ID** and **License Key**.
 
-## Getting Started
+## Getting started
 
-1.  **Clone the Repository:**
+1.  **Clone the repository:**
     ```bash
     git clone https://github.com/webamon-org/webamon.git
     cd webamon
     ```
 
-2.  **Configure Environment Variables:**
-    Create a `.env` file in the root of the `webamon` directory and add your MaxMind GeoLite2 credentials:
-    ```dotenv:.env
-    GEOLITE_ACCOUNT_ID=YOUR_ACCOUNT_ID
-    GEOLITE_LICENSE_KEY=YOUR_LICENSE_KEY
-    # Add any other necessary environment variables here
+2.  **Configure:**
+    ```bash
+    cp .env.example .env
     ```
-    Replace `YOUR_ACCOUNT_ID` and `YOUR_LICENSE_KEY` with your actual MaxMind credentials.
+    Set `OPENSEARCH_ADMIN_PASSWORD` in `.env`. OpenSearch requires a strong password: at least 8 characters with
+    upper and lower case letters, a digit and a special character. Add `MAXMIND_ACCOUNT_ID` and
+    `MAXMIND_LICENSE_KEY` if you have them.
 
-3.  **Build and Start the Stack:**
+3.  **Build and start the stack:**
     ```bash
     docker compose up --build -d
     ```
-    *(The `-d` flag runs the containers in detached mode)*
+    The first start takes a few minutes while images download. The scanner is ready when
+    `curl http://localhost:5000/healthz` returns `"status": "ok"`.
 
 ## Usage
 
-The primary interaction for initiating scans is through the `scan.py` script (run from your host machine or within a container that has access to the API endpoint if you configure one).
-
-**Basic Syntax:**
+Submit scans with `scan.py`, which calls the scanner's API at `http://localhost:5000/scan`:
 
 ```bash
-python3 scan.py [-h] (-u URL | -f FILE)
+python3 scan.py -u example.com               # one URL
+python3 scan.py -f ./test/openphish.txt      # one URL per line
 ```
 
-*   You must provide *either* a single URL (`-u`) or a file containing a list of URLs/domains (`-f`).
+If you set `SANDBOX_API_KEY` in `.env`, pass it with `-k` (or the `SANDBOX_API_KEY` environment variable).
 
-**Examples:**
+Or call the API directly:
 
-1.  **Scan a single URL:**
-    This command sends `example.com` to the Webamon API for scanning.
-    ```bash
-    python3 scan.py -u example.com
-    ```
+```bash
+curl -X POST http://localhost:5000/scan -H "Content-Type: application/json" \
+     -d '{"submission_url": "example.com"}'
+```
 
-2.  **Scan URLs from a file:**
-    This command reads URLs/domains line-by-line from `./test/openphish.txt` and sends each one to the Webamon API.
-    ```bash
-    python3 scan.py -f ./test/openphish.txt
-    ```
+The response returns the `report_id` and `scan_status`.
 
-## Accessing Data
+### Configuration
 
-*   **OpenSearch Dashboards:** Access the OpenSearch Dashboards interface (http://localhost:5601) [Open Dashboards](http://localhost:5601)
- to visualize and explore the data. Default credentials admin:admin depending on your `docker-compose.yml` setup.
+Every scanner setting is an environment variable; the common ones are in `.env.example` and `docker-compose.yml`, and
+the full list with explanations is in [`sandbox/sandbox/config.py`](sandbox/sandbox/config.py). Highlights:
 
-**Default OpenSearch Indexes:**
+| Setting | Default | What it does |
+|---|---|---|
+| `THREADS` | 4 | Concurrent scans per container (budget about 250 MB of memory each) |
+| `SCAN_TIMEOUT` | 30 | Seconds to wait for a page to load |
+| `POST_LOAD_DWELL_MS` | 0 | Keep capturing after load, to catch lazily loaded requests |
+| `DNS` | ALL | `ALL` resolves every domain on the page, `MAIN` only the page's own, `NONE` skips DNS |
+| `SAVE_SCREENSHOT` | False | Store a screenshot of each page |
+| `SAVE_RESOURCES` | True | Store loaded scripts and files in the `resources` index |
+| `FAVICON_HASHING` | True | Hash favicons for pivoting (`favicons.mmh3`) |
 
-The stack automatically creates the following OpenSearch indexes with predefined mappings upon initialization:
+## Accessing data
 
-*   `scans`: Stores the results of individual URL/domain scans, including network requests, page details, technologies, etc.
-*   `servers`: Contains information about the web servers hosting the scanned targets (IP, ASN, GeoIP).
-*   `domains`: Holds WHOIS and related domain registration data.
-*   `screenshots`: Stores screenshot data if captured during scans.
-*   `resources`: Contains information about resources loaded by the scanned pages (like JS, CSS, images).
+*   **OpenSearch Dashboards:** [http://localhost:5601](http://localhost:5601). Log in as `admin` with your
+    `OPENSEARCH_ADMIN_PASSWORD`. Index patterns for all the indices below are created automatically.
+*   **OpenSearch API:** `https://localhost:9200` (self-signed certificate).
 
-You can query these indexes directly via the API or explore them using OpenSearch Dashboards.
+Both are bound to `127.0.0.1`, so they are only reachable from the machine running the stack.
 
-**Example: Exploring Scan Data in OpenSearch Dashboards**
+**Indices:**
 
-Below is an example of the Discover view in OpenSearch Dashboards, showing data ingested into the `scans` index:
+*   `scans-YYYY.MM.DD`: one document per scan, with requests, certificates, technologies, fingerprints and DNS.
+*   `resources-YYYY.MM.DD`: files loaded by scanned pages, keyed by SHA-256.
+*   `domains`: every domain seen, with first and last seen times.
+*   `servers`: every server IP seen, with ASN and country.
+*   `screenshots-YYYY.MM.DD`: screenshots, when enabled.
+
+**Example queries** (in Dashboards Discover, on `scans-*`):
+
+*   `page_title:"Sign in"` finds login pages.
+*   `fingerprint.dom_structure:<hash>` finds every page built from the same template.
+*   `server.ip:"203.0.113.10"` finds everything hosted on one IP.
 
 ![OpenSearch Dashboards showing scan results](img/opensearch_dashboard_scans_example.PNG)
 
-This interface allows you to search, filter, and visualize the detailed information collected during each scan.
+## Running the tests
+
+```bash
+pip install -r sandbox/requirements.txt pytest pytest-asyncio
+pytest
+```
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit pull requests or open issues.
-
-

@@ -1,45 +1,78 @@
-version: '3.8'
+# Webamon Sandbox stack: the scanner, a single-node OpenSearch cluster and
+# OpenSearch Dashboards.
+#
+#   cp .env.example .env      # set OPENSEARCH_ADMIN_PASSWORD (and MaxMind keys if you have them)
+#   docker compose up --build -d
+#   python3 scan.py -u example.com
+#
+# Scale the scanner with more concurrency per container (THREADS) or more
+# containers:  docker compose up -d --scale sandbox=3  (remove container_name
+# and the host port mapping first, then put a load balancer in front).
 
 services:
-  # --- Sandbox ---
+  # --- Scanner ---
   sandbox:
     build:
       context: ./sandbox
       dockerfile: Dockerfile
-      args:
-        ELASTIC_BASE: ${ELASTIC_BASE}
-        ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-        ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-        GEOLITE_LICENSE_KEY: ${GEOLITE_LICENSE_KEY}
-        GEOLITE_ACCOUNT_ID: ${GEOLITE_ACCOUNT_ID}
-
+    image: webamon-sandbox:latest
     container_name: sandbox
-
+    restart: unless-stopped
     ports:
-      - "5000:5000"
-
+      - "${SANDBOX_PORT:-5000}:5000"
     depends_on:
       opensearch-init:
         condition: service_completed_successfully
-
     environment:
-      - ELASTIC_BASE=${ELASTIC_BASE}
-      - ELASTIC_USERNAME=${ELASTIC_USERNAME}
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - GEOLITE_LICENSE_KEY=${GEOLITE_LICENSE_KEY}
-      - GEOLITE_ACCOUNT_ID=${GEOLITE_ACCOUNT_ID}
-      - OPENSEARCH_PORT=9200
-      - OPENSEARCH_USE_SSL=true
-      - OPENSEARCH_VERIFY_CERTS=false
-      - OPENSEARCH_SSL_SHOW_WARN=false
-
+      # --- API ---
+      queue_worker: "True"
+      api_port: "5000"
+      api_key: ${SANDBOX_API_KEY:-}          # empty = no auth (fine on localhost)
+      # --- concurrency ---
+      threads: ${THREADS:-4}
+      browser_pool_size: ${BROWSER_POOL_SIZE:-2}
+      scan_timeout: ${SCAN_TIMEOUT:-30}
+      post_load_dwell_ms: ${POST_LOAD_DWELL_MS:-0}
+      # --- persistence ---
+      save_elastic: "True"
+      elastic_base: https://webamon-node1:9200
+      elastic_username: admin
+      elastic_password: ${OPENSEARCH_ADMIN_PASSWORD:?set OPENSEARCH_ADMIN_PASSWORD in .env}
+      elastic_verify_certs: "False"          # the stack uses self-signed demo certificates
+      save_dom: ${SAVE_DOM:-True}
+      save_resources: ${SAVE_RESOURCES:-True}
+      save_screenshot: ${SAVE_SCREENSHOT:-False}
+      # --- enrichment ---
+      dns: ${DNS:-ALL}
+      favicon_hashing: ${FAVICON_HASHING:-True}
+      block_private_networks: "True"
+      log_level: ${LOG_LEVEL:-INFO}
+    volumes:
+      - geoip:/app/geoIP:ro
+    # Each concurrent scan holds a browser context: budget ~250 MB per thread.
+    mem_limit: ${SANDBOX_MEM_LIMIT:-3g}
+    shm_size: 1g                              # Chromium needs shared memory
     networks:
       - opensearch-net
 
+  # --- MaxMind GeoLite2 databases (optional) ---
+  # Downloads GeoLite2-ASN and GeoLite2-Country into the `geoip` volume when
+  # MAXMIND_ACCOUNT_ID / MAXMIND_LICENSE_KEY are set in .env. Without them this
+  # service exits and the scanner runs without country/ASN enrichment.
+  geoip:
+    image: ghcr.io/maxmind/geoipupdate:v7.1.0
+    container_name: geoip
+    environment:
+      GEOIPUPDATE_ACCOUNT_ID: ${MAXMIND_ACCOUNT_ID:-}
+      GEOIPUPDATE_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
+      GEOIPUPDATE_EDITION_IDS: GeoLite2-ASN GeoLite2-Country
+    volumes:
+      - geoip:/usr/share/GeoIP
+    restart: "no"
 
-  # --- Certificate Generator Service ---
+  # --- Certificate generator (self-signed demo certificates) ---
   certgen:
-    image: alpine:latest
+    image: alpine:3.20
     container_name: certgen
     volumes:
       - ./opensearch:/opensearch
@@ -51,44 +84,28 @@ services:
         dos2unix generate-certs.sh &&
         chmod +x generate-certs.sh &&
         ./generate-certs.sh &&
-        # Ensure OpenSearch can read the certificate files
         chmod 644 demo-certificates/node.pem demo-certificates/root-ca.pem &&
         chmod 600 demo-certificates/node.key demo-certificates/root-ca.key &&
-        # OpenSearch runs as 'opensearch' user, make sure it can read these files
         chown -R 1000:1000 demo-certificates &&
-        echo '✅ Certificates generated successfully with correct permissions'
+        echo 'Certificates generated'
       "
     restart: "no"
-    healthcheck:
-      test: [ "CMD", "test", "-f", "/opensearch/demo-certificates/node.pem" ]
-      interval: 2s
-      retries: 10
 
+  # --- OpenSearch ---
   webamon-node1:
-    image: opensearchproject/opensearch:latest
+    image: opensearchproject/opensearch:2.19.1
     container_name: webamon-node1
     depends_on:
       certgen:
         condition: service_completed_successfully
-
     environment:
       - cluster.name=webamon-cluster
       - node.name=webamon-node1
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - OPENSEARCH_JAVA_OPTS=-Xms2g -Xmx2g
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=admin
-      # Enable security and SSL
-      - plugins.security.ssl.transport.pemcert_filepath=/usr/share/opensearch/config/demo-certificates/node.pem
-      - plugins.security.ssl.transport.pemkey_filepath=/usr/share/opensearch/config/demo-certificates/node.key
-      - plugins.security.ssl.transport.pemtrustedcas_filepath=/usr/share/opensearch/config/demo-certificates/root-ca.pem
-      - plugins.security.ssl.transport.enforce_hostname_verification=false
-      - plugins.security.ssl.http.enabled=true
-      - plugins.security.ssl.http.pemcert_filepath=/usr/share/opensearch/config/demo-certificates/node.pem
-      - plugins.security.ssl.http.pemkey_filepath=/usr/share/opensearch/config/demo-certificates/node.key
-      - plugins.security.ssl.http.pemtrustedcas_filepath=/usr/share/opensearch/config/demo-certificates/root-ca.pem
-      - plugins.security.allow_unsafe_democertificates=true
-      - plugins.security.allow_default_init_securityindex=true
+      # OpenSearch 2.12+ refuses to start with a weak admin password.
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD:?set OPENSEARCH_ADMIN_PASSWORD in .env}
     ulimits:
       memlock: { soft: -1, hard: -1 }
       nofile: { soft: 65536, hard: 65536 }
@@ -97,90 +114,73 @@ services:
       - ./opensearch/opensearch.yml:/usr/share/opensearch/config/opensearch.yml
       - opensearch-certs:/usr/share/opensearch/config/demo-certificates
     ports:
-      - "9200:9200"
-      - "9600:9600"
+      - "127.0.0.1:${OPENSEARCH_PORT:-9200}:9200"
     networks:
       - opensearch-net
     healthcheck:
-      test: [ "CMD-SHELL", "curl -s -k --fail -u admin:admin https://localhost:9200/_cluster/health || exit 1" ]
-      interval: 30s
+      test: [ "CMD-SHELL", "curl -s -k --fail -u \"admin:$${OPENSEARCH_INITIAL_ADMIN_PASSWORD}\" https://localhost:9200/_cluster/health || exit 1" ]
+      interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 20
       start_period: 60s
 
-  # --- OpenSearch Initialization Service ---
+  # --- OpenSearch Dashboards ---
+  webamon-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.1
+    container_name: webamon-dashboards
+    ports:
+      - "127.0.0.1:${DASHBOARDS_PORT:-5601}:5601"
+    environment:
+      OPENSEARCH_HOSTS: '["https://webamon-node1:9200"]'
+      OPENSEARCH_SSL_VERIFICATIONMODE: 'none'
+      OPENSEARCH_USERNAME: 'admin'
+      OPENSEARCH_PASSWORD: ${OPENSEARCH_ADMIN_PASSWORD:?set OPENSEARCH_ADMIN_PASSWORD in .env}
+    networks:
+      - opensearch-net
+    depends_on:
+      webamon-node1:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -u \"admin:$${OPENSEARCH_PASSWORD}\" --fail http://localhost:5601/api/status || exit 1" ]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  # --- One-time setup: Dashboards index patterns ---
+  # Index templates and the domains/servers indices are created by the
+  # scanner itself on startup, so this only prepares Dashboards.
   opensearch-init:
-    image: alpine:latest
+    image: alpine:3.20
     container_name: opensearch-init
     depends_on:
       webamon-node1:
         condition: service_healthy
       webamon-dashboards:
         condition: service_healthy
-      certgen:
-        condition: service_completed_successfully
     volumes:
-      - ./opensearch/init-opensearch.sh:/app/init-opensearch.sh
-      - ./opensearch/templates:/app/templates
-      - opensearch-certs:/certs
+      - ./opensearch/init-opensearch.sh:/app/init-opensearch.sh:ro
     environment:
-      - OPENSEARCH_URL=https://webamon-node1:9200
-      - OPENSEARCH_USERNAME=admin
-      - OPENSEARCH_PASSWORD=admin
-      - CA_CERT_PATH=/certs/demo-certificates/root-ca.pem
+      OPENSEARCH_URL: https://webamon-node1:9200
+      DASHBOARDS_URL: http://webamon-dashboards:5601
+      OPENSEARCH_USERNAME: admin
+      OPENSEARCH_PASSWORD: ${OPENSEARCH_ADMIN_PASSWORD:?set OPENSEARCH_ADMIN_PASSWORD in .env}
     command: >
       sh -c "
-        apk add --no-cache curl bash dos2unix jq &&
-        # Copy the script to a temporary location inside the container
+        apk add --no-cache curl bash dos2unix &&
         cp /app/init-opensearch.sh /tmp/init-opensearch.sh &&
-        # Run dos2unix on the temporary copy
         dos2unix /tmp/init-opensearch.sh &&
-        # Make the temporary copy executable
-        chmod +x /tmp/init-opensearch.sh &&
-        echo 'Waiting a few seconds for OpenSearch to be fully ready after healthcheck...' &&
-        sleep 5 &&
-        echo 'Running initialization script from temporary location...' &&
-        # Execute the temporary copy
-        /tmp/init-opensearch.sh &&
-        echo '✅ Initialization script finished.'
+        bash /tmp/init-opensearch.sh
       "
     networks:
       - opensearch-net
     restart: "no"
 
-  webamon-dashboards:
-    image: opensearchproject/opensearch-dashboards:latest
-    container_name: webamon-dashboards
-    ports:
-      - 5601:5601
-    expose:
-      - '5601'
-    environment:
-      OPENSEARCH_HOSTS: '["https://webamon-node1:9200"]'
-      OPENSEARCH_SSL_VERIFICATIONMODE: 'none'
-      OPENSEARCH_USERNAME: 'admin'
-      OPENSEARCH_PASSWORD: 'admin'
-    networks:
-      - opensearch-net
-    depends_on:
-      webamon-node1:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -s -u admin:admin --fail http://localhost:5601/api/status || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-
-
-# --- Volumes ---
 volumes:
   opensearch-data:
-    driver: local
   opensearch-certs:
-    driver: local
+  geoip:
 
-# --- Networks ---
 networks:
-  opensearch-net: # Network for OpenSearch, Dashboards, and API
+  opensearch-net:
     driver: bridge
